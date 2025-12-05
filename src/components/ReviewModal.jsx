@@ -332,7 +332,7 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                 title: formData.title,
                 description: formData.description,
                 anonymous: formData.anonymous,
-                validated: validationResult.validado,
+                validated: validationResult?.validado || false,
                 author_name: authorName
             };
 
