@@ -246,6 +246,7 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                 );
                 if (!continuar) {
                     setValidating(false);
+                    setValidationResult({ validado: false });
                     return;
                 }
             } finally {

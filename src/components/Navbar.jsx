@@ -29,18 +29,24 @@ const Navbar = () => {
 
                 {/* Botones centrales - Explorar */}
                 <div className="flex items-center gap-3">
-                    <Link
+                    {/* <Link
                         to="/explore"
                         className="px-6 py-2 bg-yellow-400 text-blue-950 font-semibold rounded-full hover:bg-yellow-500 transition-colors"
                     >
                         Explorar Reseñas
-                    </Link>
+                    </Link> */}
                     <Link
+                        to="/courses"
+                        className="px-6 py-2 bg-yellow-400 text-blue-950 font-semibold rounded-full hover:bg-yellow-500 transition-colors"
+                    >
+                        Explorar Cursos
+                    </Link>
+                    {/* <Link
                         to="/courses"
                         className="px-6 py-2 bg-transparent border-2 border-blue-400 text-white font-semibold rounded-full hover:bg-blue-400/20 transition-colors"
                     >
                         Explorar Cursos
-                    </Link>
+                    </Link> */}
                 </div>
 
                 {/* Navigation Links */}
