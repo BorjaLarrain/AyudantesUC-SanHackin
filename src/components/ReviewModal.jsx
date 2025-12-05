@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import supabase from '../config/supabaseClient';
+import validarAyudantia from '../services/ValidateService';
 
 const ReviewModal = ({ isOpen, onClose, courseId }) => {
     const [step, setStep] = useState(1);
@@ -7,6 +8,9 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [user, setUser] = useState(null);
+    const [course, setCourse] = useState(null);
+    const [validating, setValidating] = useState(false);
+    const [validationResult, setValidationResult] = useState(null);
     
     // Form data
     const [formData, setFormData] = useState({
@@ -31,7 +35,28 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
     const totalSteps = 5;
 
     useEffect(() => {
+        const fetchCourse = async () => {
+            if (courseId) {
+                try {
+                    const { data, error } = await supabase
+                        .from('Courses')
+                        .select('id, name, initial')
+                        .eq('id', courseId)
+                        .single();
+                    
+                    if (error) {
+                        console.error('Error fetching course:', error);
+                    } else {
+                        setCourse(data);
+                    }
+                } catch (err) {
+                    console.error('Error:', err);
+                }
+            }
+        };
+
         if (isOpen && courseId) {
+            fetchCourse();
             // Get current user
             const getUser = async () => {
                 const { data: { user } } = await supabase.auth.getUser();
@@ -191,6 +216,43 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
             return;
         }
 
+        // Si hay archivo de validación, validarlo primero
+        if (formData.validationFile && course) {
+            setValidating(true);
+            setValidationResult(null);
+            
+            try {
+                // Obtener la sigla del curso para la validación
+                const cursoSigla = course.initial || course.name;
+                const resultado = await validarAyudantia(formData.validationFile, cursoSigla);
+                
+                setValidationResult(resultado);
+                
+                if (!resultado.validado) {
+                    const continuar = confirm(
+                        'El documento no pudo validar tu experiencia como ayudante de este curso. ' +
+                        '¿Deseas continuar y publicar la reseña sin validación?'
+                    );
+                    if (!continuar) {
+                        setValidating(false);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error('Error en validación:', error);
+                const continuar = confirm(
+                    'Hubo un error al validar el documento. ' +
+                    '¿Deseas continuar y publicar la reseña sin validación?'
+                );
+                if (!continuar) {
+                    setValidating(false);
+                    return;
+                }
+            } finally {
+                setValidating(false);
+            }
+        }
+
         setSubmitting(true);
         try {
             let finalTaTypeId = formData.taTypeId;
@@ -256,7 +318,7 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                 title: formData.title,
                 description: formData.description,
                 anonymous: formData.anonymous,
-                validated: false // Always false, regardless of file upload
+                validated: validationResult.validado
             };
 
             const { error: insertError } = await supabase
