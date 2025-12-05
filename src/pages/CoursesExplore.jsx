@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../components/Navbar';
 import supabase from '../config/supabaseClient';
 import CourseCard from '../components/CourseCard';
@@ -28,6 +28,7 @@ const CoursesExplore = () => {
     const [totalCourses, setTotalCourses] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const coursesPerPage = 25;
+    const prevDebouncedRef = useRef({ searchQuery: null, filters: null });
 
     // Cargar prefijos de cursos desde Supabase
     useEffect(() => {
@@ -127,6 +128,7 @@ const CoursesExplore = () => {
                     });
                 }
                 
+                // Los cursos ya vienen ordenados por reviews_count DESC desde el backend
                 setCoursesStats(filteredData);
                 // Obtener el total original de la función RPC
                 const originalTotal = data.length > 0 ? (data[0].total_count || 0) : 0;
@@ -171,8 +173,24 @@ const CoursesExplore = () => {
 
     // Cargar cursos cuando cambian los filtros debounced (resetea a página 1)
     useEffect(() => {
-        setCurrentPage(1);
-        fetchCoursesStats(1);
+        const prev = prevDebouncedRef.current;
+        const searchQueryChanged = prev.searchQuery !== debouncedSearchQuery;
+        const filtersChanged = JSON.stringify(prev.filters) !== JSON.stringify(debouncedFilters);
+        
+        // Solo ejecutar si los valores realmente cambiaron (evita ejecuciones duplicadas por StrictMode)
+        if (prev.searchQuery === null || searchQueryChanged || filtersChanged) {
+            prevDebouncedRef.current = {
+                searchQuery: debouncedSearchQuery,
+                filters: debouncedFilters
+            };
+            
+            // Solo resetear página si no es la primera carga
+            if (prev.searchQuery !== null) {
+                setCurrentPage(1);
+            }
+            
+            fetchCoursesStats(1);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedSearchQuery, debouncedFilters]);
 
