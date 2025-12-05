@@ -61,13 +61,15 @@ const CoursesExplore = () => {
                                      debouncedFilters.minAvgSalary ||
                                      debouncedSearchQuery;
 
+            // Para filtros de rango de salario, no enviar p_min_salary al backend
+            // porque el frontend manejará el filtrado por rango completo
             const params = {
                 p_page: page,
                 p_page_size: coursesPerPage,
                 p_course_initial: debouncedFilters.courseInitial?.trim() || null,
                 p_course_prefix: debouncedFilters.coursePrefix?.trim() || null,
                 p_max_hours: debouncedFilters.maxAvgHours?.trim() ? parseFloat(debouncedFilters.maxAvgHours) : null,
-                p_min_salary: debouncedFilters.minAvgSalary?.trim() ? parseFloat(debouncedFilters.minAvgSalary) : null,
+                p_min_salary: null, // Siempre null, el frontend maneja el filtrado por rango
                 p_search_query: debouncedSearchQuery?.trim() || null
             };
 
@@ -91,10 +93,28 @@ const CoursesExplore = () => {
                             return false;
                         }
                         
-                        // Si se filtra por salario mínimo, excluir cursos con N/A en salario
-                        if (debouncedFilters.minAvgSalary && 
-                            (!course.avg_salary_midpoint || course.avg_salary_midpoint === null)) {
-                            return false;
+                        // Si se filtra por salario, aplicar filtro de rango
+                        if (debouncedFilters.minAvgSalary) {
+                            const minSalary = parseFloat(debouncedFilters.minAvgSalary);
+                            
+                            // Excluir cursos con N/A en salario
+                            if (!course.avg_salary_midpoint || course.avg_salary_midpoint === null) {
+                                return false;
+                            }
+                            
+                            // Si es "250 mil o más", mostrar todos los cursos >= 250k
+                            if (minSalary === 250000) {
+                                if (course.avg_salary_midpoint < 250000) {
+                                    return false;
+                                }
+                            } else {
+                                // Para rangos, incluir cursos cuyo salario promedio esté dentro del rango
+                                // Ejemplo: rango "$10.000 - $20.000" incluye cursos con salario entre 10.000 y 19.999.99
+                                const maxSalary = minSalary + 10000;
+                                if (course.avg_salary_midpoint < minSalary || course.avg_salary_midpoint >= maxSalary) {
+                                    return false;
+                                }
+                            }
                         }
                         
                         // Si se filtra por horas máximas, excluir cursos con N/A en horas
@@ -313,31 +333,31 @@ const CoursesExplore = () => {
                                 className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border-2 border-blue-400/30 rounded-lg text-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 transition-all"
                             >
                                 <option value="">Sin mínimo</option>
-                                <option value="0" className="bg-blue-900">$0 o más</option>
-                                <option value="10000" className="bg-blue-900">$10.000 o más</option>
-                                <option value="20000" className="bg-blue-900">$20.000 o más</option>
-                                <option value="30000" className="bg-blue-900">$30.000 o más</option>
-                                <option value="40000" className="bg-blue-900">$40.000 o más</option>
-                                <option value="50000" className="bg-blue-900">$50.000 o más</option>
-                                <option value="60000" className="bg-blue-900">$60.000 o más</option>
-                                <option value="70000" className="bg-blue-900">$70.000 o más</option>
-                                <option value="80000" className="bg-blue-900">$80.000 o más</option>
-                                <option value="90000" className="bg-blue-900">$90.000 o más</option>
-                                <option value="100000" className="bg-blue-900">$100.000 o más</option>
-                                <option value="110000" className="bg-blue-900">$110.000 o más</option>
-                                <option value="120000" className="bg-blue-900">$120.000 o más</option>
-                                <option value="130000" className="bg-blue-900">$130.000 o más</option>
-                                <option value="140000" className="bg-blue-900">$140.000 o más</option>
-                                <option value="150000" className="bg-blue-900">$150.000 o más</option>
-                                <option value="160000" className="bg-blue-900">$160.000 o más</option>
-                                <option value="170000" className="bg-blue-900">$170.000 o más</option>
-                                <option value="180000" className="bg-blue-900">$180.000 o más</option>
-                                <option value="190000" className="bg-blue-900">$190.000 o más</option>
-                                <option value="200000" className="bg-blue-900">$200.000 o más</option>
-                                <option value="210000" className="bg-blue-900">$210.000 o más</option>
-                                <option value="220000" className="bg-blue-900">$220.000 o más</option>
-                                <option value="230000" className="bg-blue-900">$230.000 o más</option>
-                                <option value="240000" className="bg-blue-900">$240.000 o más</option>
+                                <option value="0" className="bg-blue-900">$0 - $10.000</option>
+                                <option value="10000" className="bg-blue-900">$10.000 - $20.000</option>
+                                <option value="20000" className="bg-blue-900">$20.000 - $30.000</option>
+                                <option value="30000" className="bg-blue-900">$30.000 - $40.000</option>
+                                <option value="40000" className="bg-blue-900">$40.000 - $50.000</option>
+                                <option value="50000" className="bg-blue-900">$50.000 - $60.000</option>
+                                <option value="60000" className="bg-blue-900">$60.000 - $70.000</option>
+                                <option value="70000" className="bg-blue-900">$70.000 - $80.000</option>
+                                <option value="80000" className="bg-blue-900">$80.000 - $90.000</option>
+                                <option value="90000" className="bg-blue-900">$90.000 - $100.000</option>
+                                <option value="100000" className="bg-blue-900">$100.000 - $110.000</option>
+                                <option value="110000" className="bg-blue-900">$110.000 - $120.000</option>
+                                <option value="120000" className="bg-blue-900">$120.000 - $130.000</option>
+                                <option value="130000" className="bg-blue-900">$130.000 - $140.000</option>
+                                <option value="140000" className="bg-blue-900">$140.000 - $150.000</option>
+                                <option value="150000" className="bg-blue-900">$150.000 - $160.000</option>
+                                <option value="160000" className="bg-blue-900">$160.000 - $170.000</option>
+                                <option value="170000" className="bg-blue-900">$170.000 - $180.000</option>
+                                <option value="180000" className="bg-blue-900">$180.000 - $190.000</option>
+                                <option value="190000" className="bg-blue-900">$190.000 - $200.000</option>
+                                <option value="200000" className="bg-blue-900">$200.000 - $210.000</option>
+                                <option value="210000" className="bg-blue-900">$210.000 - $220.000</option>
+                                <option value="220000" className="bg-blue-900">$220.000 - $230.000</option>
+                                <option value="230000" className="bg-blue-900">$230.000 - $240.000</option>
+                                <option value="240000" className="bg-blue-900">$240.000 - $250.000</option>
                                 <option value="250000" className="bg-blue-900">$250.000 o más</option>
                             </select>
                         </div>
