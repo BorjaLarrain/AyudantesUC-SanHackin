@@ -55,7 +55,7 @@ function App() {
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <Link
-            to="/reviews"
+            to="/explore"
             className="px-8 py-4 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-semibold rounded-full flex items-center gap-3 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
