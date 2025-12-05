@@ -322,8 +322,8 @@ const Explore = () => {
                     processedData.sort((a, b) => {
                         return (b.rating || 0) - (a.rating || 0);
                     });
-
-                    setResults(processedData);
+                    setReviews(processedData);
+                    // setResults(processedData);
                     console.log("Resultados encontrados:", processedData);
                 }
             } catch (error) {
@@ -507,36 +507,6 @@ const Explore = () => {
                     </div>
                 </div>
 
-                {/* Resultados */}
-                {loading ? (
-                    <div className="mt-8 text-center text-white/70">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
-                        <p>Buscando resultados...</p>
-                    </div>
-                ) : results.length > 0 ? (
-                    <div className="mt-8">
-                        <h2 className="text-2xl font-bold text-white mb-4">
-                            {results.length} {results.length === 1 ? 'resultado encontrado' : 'resultados encontrados'}
-                        </h2>
-                        {/* Aquí irán los cards de resultados cuando los implementes */}
-                        <div className="space-y-4">
-                            {results.map((review) => (
-                                <div key={review.id} className="bg-white/5 backdrop-blur-sm border-2 border-blue-400/20 rounded-xl p-6">
-                                    <h3 className="text-xl font-bold text-white mb-2">{review.title}</h3>
-                                    <p className="text-white/70 mb-2">Curso: {review.Courses?.name} ({review.Courses?.initial})</p>
-                                    <p className="text-white/70 mb-2">Rating: {review.rating} ⭐</p>
-                                    <p className="text-white/70 mb-2">Salario: ${review.min_salary} - ${review.max_salary} CLP</p>
-                                    <p className="text-white/90">{review.description}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ) : (searchQuery || Object.values(filters).some(f => f !== '')) ? (
-                    <div className="mt-8 text-center text-white/70">
-                        <p className="text-lg mb-2">No se encontraron resultados</p>
-                        <p className="text-sm">Intenta ajustar tus filtros o términos de búsqueda</p>
-                    </div>
-                )}
                 {/* Lista de reviews */}
                 {loading ? (
                     <div className="text-center text-white/70 py-12">
