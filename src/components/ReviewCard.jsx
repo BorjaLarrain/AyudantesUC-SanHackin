@@ -1,6 +1,31 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { UserAuth } from '../context/AuthContext';
 
 const ReviewCard = ({ review }) => {
+    const navigate = useNavigate();
+    const { session, loading: authLoading } = UserAuth();
+
+    const handlePublishReview = (e) => {
+        e.stopPropagation(); // Evitar que se active el onClick del contenedor
+        
+        if (authLoading) return; // Esperar a que cargue la autenticación
+        
+        if (!session) {
+            // Si no está logueado, redirigir a signin
+            navigate('/signin');
+        } else {
+            // Si está logueado, redirigir a la página del curso con el modal abierto
+            const courseId = review.Courses?.id;
+            if (courseId) {
+                navigate(`/course/${courseId}?publish=true`);
+            } else {
+                // Si no hay courseId, redirigir a explore
+                navigate('/explore');
+            }
+        }
+    };
+
     return (
         <div className="rounded-lg border border-blue-400/20 bg-white/10 text-gray-900 shadow-sm group h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:cursor-pointer">
             <div className="flex flex-col space-y-1.5 p-6 pb-3">
@@ -209,23 +234,34 @@ const ReviewCard = ({ review }) => {
                     </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-gray-200">
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <svg 
-                            xmlns="http://www.w3.org/2000/svg" 
-                            width="24" 
-                            height="24" 
-                            viewBox="0 0 24 24" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            strokeWidth="2" 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
-                            className="h-3 w-3"
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <svg 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                width="24" 
+                                height="24" 
+                                viewBox="0 0 24 24" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                strokeWidth="2" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                className="h-3 w-3"
+                            >
+                                <path d="M12 7v14"></path>
+                                <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
+                            </svg>
+                            <span className="truncate text-white">Ingeniería • San Joaquín</span>
+                        </div>
+                        <button
+                            onClick={handlePublishReview}
+                            className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-semibold rounded-lg text-xs transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1.5 whitespace-nowrap"
                         >
-                            <path d="M12 7v14"></path>
-                            <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
-                        </svg>
-                        <span className="truncate text-white">Ingeniería • San Joaquín</span>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Publicar Review
+                        </button>
                     </div>
                 </div>
             </div>
