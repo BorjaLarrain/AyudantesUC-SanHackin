@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 
 function App() {
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-950 via-blue-900 to-blue-950">
       {/* Patrón de fondo con signos + */}
