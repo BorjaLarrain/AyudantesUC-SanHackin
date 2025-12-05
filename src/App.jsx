@@ -82,7 +82,7 @@ function App() {
 
           <button
             onClick={handlePublishReview}
-            className="px-8 py-4 bg-transparent border-2 border-blue-400 text-white font-semibold rounded-full flex items-center gap-3 transition-all duration-200 hover:bg-blue-400/20 hover:border-blue-300 shadow-lg hover:shadow-xl hover:scale-105"
+            className="px-8 py-4 bg-transparent border-2 border-blue-400 text-white font-semibold rounded-full flex items-center gap-3 transition-all duration-200 hover:bg-blue-400/20 hover:border-blue-300 shadow-lg hover:shadow-xl hover:scale-105 hover:cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

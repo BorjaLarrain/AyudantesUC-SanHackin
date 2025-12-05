@@ -255,7 +255,7 @@ const ReviewCard = ({ review }) => {
                         </div>
                         <button
                             onClick={handlePublishReview}
-                            className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-semibold rounded-lg text-xs transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1.5 whitespace-nowrap"
+                            className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-semibold rounded-lg text-xs transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1.5 whitespace-nowrap hover:cursor-pointer"
                         >
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
