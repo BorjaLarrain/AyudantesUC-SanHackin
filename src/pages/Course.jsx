@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ReviewModal from '../components/ReviewModal';
+import ReviewCard from '../components/ReviewCard';
 import supabase from '../config/supabaseClient';
 
 const Course = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [course, setCourse] = useState(null);
     const [courseStats, setCourseStats] = useState(null);
+    const [courseReviews, setCourseReviews] = useState([]);
+    const [allReviews, setAllReviews] = useState([]); // Guardar todas las reviews sin filtrar
+    const [taTypes, setTaTypes] = useState([]);
+    const [selectedTaTypeId, setSelectedTaTypeId] = useState('');
     const [loading, setLoading] = useState(true);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
@@ -56,6 +63,46 @@ const Course = () => {
                         // No reviews yet, set empty stats
                         setCourseStats(null);
                     }
+
+                    // Fetch reviews for this course
+                    setReviewsLoading(true);
+                    const { data: reviewsData, error: reviewsError } = await supabase
+                        .from('Reviews')
+                        .select(`
+                            *,
+                            Courses (
+                                id,
+                                name,
+                                initial
+                            ),
+                            TaTypes (
+                                id,
+                                name
+                            )
+                        `)
+                        .eq('course_id', parseInt(id))
+                        .order('created_at', { ascending: false });
+
+                    if (reviewsError) {
+                        console.error('Error fetching course reviews:', reviewsError);
+                    } else {
+                        const reviews = reviewsData || [];
+                        setAllReviews(reviews);
+                        setCourseReviews(reviews);
+                    }
+                    setReviewsLoading(false);
+
+                    // Fetch TA types for filter
+                    const { data: taTypesData, error: taTypesError } = await supabase
+                        .from('TaTypes')
+                        .select('id, name')
+                        .order('name');
+                    
+                    if (taTypesError) {
+                        console.error('Error fetching TA types:', taTypesError);
+                    } else {
+                        setTaTypes(taTypesData || []);
+                    }
                 }
             } catch (err) {
                 console.error('Error fetching course:', err);
@@ -89,6 +136,21 @@ const Course = () => {
 
         fetchCourse();
     }, [id]);
+
+    // Filtrar reviews cuando cambia el tipo de ayudantía seleccionado
+    useEffect(() => {
+        if (selectedTaTypeId === '') {
+            // Si no hay filtro seleccionado, mostrar todas las reviews
+            setCourseReviews(allReviews);
+        } else {
+            // Filtrar por tipo de ayudantía
+            const filtered = allReviews.filter(
+                review => review.ta_type_id === parseInt(selectedTaTypeId) || 
+                         review.TaTypes?.id === parseInt(selectedTaTypeId)
+            );
+            setCourseReviews(filtered);
+        }
+    }, [selectedTaTypeId, allReviews]);
 
     // Abrir el modal automáticamente si viene el query parameter publish=true
     useEffect(() => {
@@ -221,6 +283,60 @@ const Course = () => {
                             </p>
                         </div>
                     )}
+
+                    {/* Reviews Section */}
+                    <div className="mt-12">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                            <h2 className="text-3xl font-bold text-white">
+                                Reseñas de este curso
+                                {courseReviews.length > 0 && (
+                                    <span className="text-yellow-400 ml-2">({courseReviews.length})</span>
+                                )}
+                            </h2>
+                            
+                            {/* Filtro por tipo de ayudantía */}
+                            {taTypes.length > 0 && (
+                                <div className="flex items-center gap-3">
+                                    <label htmlFor="taTypeFilter" className="text-white font-medium">
+                                        Filtrar por tipo:
+                                    </label>
+                                    <select
+                                        id="taTypeFilter"
+                                        value={selectedTaTypeId}
+                                        onChange={(e) => setSelectedTaTypeId(e.target.value)}
+                                        className="px-4 py-2 bg-blue-900/50 border border-blue-400/30 rounded-lg text-white focus:outline-none focus:border-yellow-400 transition-colors min-w-[200px]"
+                                    >
+                                        <option value="">Todos los tipos</option>
+                                        {taTypes.map(type => (
+                                            <option key={type.id} value={type.id}>
+                                                {type.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
+                        {reviewsLoading ? (
+                            <div className="text-center text-white/70 py-8">
+                                <p>Cargando reseñas...</p>
+                            </div>
+                        ) : courseReviews.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {courseReviews.map((review) => (
+                                    <div key={review.id} onClick={() => navigate(`/review/${review.id}`)}>
+                                        <ReviewCard review={review} className="hover:pointer-cursor" />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-blue-900/20 border border-blue-400/10 rounded-xl p-6">
+                                <p className="text-white/70 text-center">
+                                    Aún no hay reseñas para este curso. ¡Sé el primero en compartir tu experiencia!
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
             <ReviewModal
