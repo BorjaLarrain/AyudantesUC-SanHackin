@@ -2,7 +2,7 @@ import React from 'react';
 
 const ReviewCard = ({ review }) => {
     return (
-        <div className="rounded-lg border border-blue-400/20 bg-white/10 text-gray-900 shadow-sm group h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+        <div className="rounded-lg border border-blue-400/20 bg-white/10 text-gray-900 shadow-sm group h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:cursor-pointer">
             <div className="flex flex-col space-y-1.5 p-6 pb-3">
                 <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">

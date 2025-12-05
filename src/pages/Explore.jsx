@@ -322,8 +322,7 @@ const Explore = () => {
                     processedData.sort((a, b) => {
                         return (b.rating || 0) - (a.rating || 0);
                     });
-                    setReviews(processedData);
-                    // setResults(processedData);
+                    setResults(processedData);
                     console.log("Resultados encontrados:", processedData);
                 }
             } catch (error) {
@@ -512,12 +511,12 @@ const Explore = () => {
                     <div className="text-center text-white/70 py-12">
                         <p>Cargando reviews...</p>
                     </div>
-                ) : reviews.length > 0 ? (
+                ) : results.length > 0 ? (
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-2  gap-6 mb-8">
-                            {reviews.map((review) => (
+                            {results.map((review) => (
                                 <div key={review.id} onClick={() => handleReviewClick(review.id)}>
-                                <ReviewCard key={review.id} review={review} />
+                                <ReviewCard key={review.id} review={review} className="hover:pointer-cursor"/>
                                 </div>
                             ))}
                         </div>
