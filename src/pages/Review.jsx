@@ -384,6 +384,28 @@ const Review = () => {
                                 {review.title}
                             </h1>
 
+                            {/* Autor (si no es anónimo) */}
+                            {!review.anonymous && review.author_name && (
+                                <div className="flex items-center gap-2 mb-4">
+                                    <svg 
+                                        xmlns="http://www.w3.org/2000/svg" 
+                                        width="20" 
+                                        height="20" 
+                                        viewBox="0 0 24 24" 
+                                        fill="none" 
+                                        stroke="currentColor" 
+                                        strokeWidth="2" 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        className="h-5 w-5 text-white/70"
+                                    >
+                                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
+                                    <span className="text-white/70 text-sm">Por {review.author_name}</span>
+                                </div>
+                            )}
+
                             {/* Descripción */}
                             <div className="mb-6">
                                 <p className="text-white whitespace-pre-wrap leading-relaxed">
