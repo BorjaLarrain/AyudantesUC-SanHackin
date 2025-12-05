@@ -499,7 +499,7 @@ const Explore = () => {
                         )}
                         <button
                             onClick={clearFilters}
-                            className="px-6 py-3 bg-transparent border-2 border-blue-400 text-white font-semibold rounded-lg hover:bg-blue-400/20 transition-all duration-200"
+                            className="px-6 py-3 bg-transparent border-2 border-blue-400 text-white font-semibold rounded-lg hover:bg-blue-400/20 transition-all duration-200 hover:cursor-pointer"
                         >
                             Limpiar filtros
                         </button>
