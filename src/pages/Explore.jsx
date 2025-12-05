@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import supabase from '../config/supabaseClient';
+import ReviewCard from '../components/ReviewCard';
+import { useNavigate } from 'react-router-dom';
 
 const Explore = () => {
+    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState({
         courseInitial: '', // Sigla del curso
@@ -24,6 +27,14 @@ const Explore = () => {
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState([]);
 
+    // configurar la paginacion
+    const [reviews, setReviews] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalReviews, setTotalReviews] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const reviewsPerPage = 25;
+
+    // Cargar prefijos de cursos desde Supabase
     // useEffect que obtiene los prefijos de Supabase cuando se monta el componente
     useEffect(() => {
         const fetchCoursePrefixes = async () => {
@@ -46,6 +57,82 @@ const Explore = () => {
         fetchCoursePrefixes();
     }, []);
 
+    // Función para cargar todas las reviews con paginación
+    const fetchReviews = async (page = 1) => {
+        setLoading(true);
+        try {
+            console.log('Fetching reviews for page:', page);
+            // Primero, contar el total de reviews
+            const { count, error: countError } = await supabase
+                .from('Reviews')
+                .select('*', { count: 'exact', head: true });
+
+            if (countError) {
+                console.error('Error counting reviews:', countError);
+            } else {
+                setTotalReviews(count || 0);
+                const totalPagesCalc = Math.ceil((count || 0) / reviewsPerPage);
+                setTotalPages(totalPagesCalc);
+            }
+
+            // Calcular el rango para la paginación
+            const start = (page - 1) * reviewsPerPage;
+            const end = start + reviewsPerPage - 1;
+
+            // Obtener las reviews con paginación
+            // Ajusta esta query según la estructura de tu tabla Reviews
+            const { data, error } = await supabase
+                .from('Reviews')
+                .select(`
+                    *,
+                    Courses (
+                        id,
+                        name,
+                        initial
+                    ),
+                    TaTypes (
+                        id,
+                        name
+                    )
+                `)
+                .order('created_at', { ascending: false }) // Ordenar por más reciente
+                .range(start, end);
+
+            if (error) {
+                console.error('Error fetching reviews:', error);
+            } else {
+                setReviews(data || []);
+                console.log('Reviews fetched:', data);
+                setCurrentPage(page);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Cargar reviews cuando se monta el componente
+    useEffect(() => {
+        fetchReviews(1);
+    }, []);
+
+    // Cambiar de página
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            fetchReviews(newPage);
+            // Scroll al inicio de la página
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        // Aquí irá la lógica de búsqueda con filtros
+        console.log('Buscando:', searchQuery);
+        console.log('Filtros:', filters);
+        applyFilters();
+    };
     // Debounce para searchQuery (espera 500ms después de que el usuario deja de escribir)
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -268,6 +355,10 @@ const Explore = () => {
         setDebouncedSearchQuery('');
     };
 
+    const handleReviewClick = (reviewId) => {
+        navigate(`/review/${reviewId}`);
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-b from-blue-950 via-blue-900 to-blue-950">
             {/* Patrón de fondo con signos + */}
@@ -445,7 +536,80 @@ const Explore = () => {
                         <p className="text-lg mb-2">No se encontraron resultados</p>
                         <p className="text-sm">Intenta ajustar tus filtros o términos de búsqueda</p>
                     </div>
-                ) : null}
+                )}
+                {/* Lista de reviews */}
+                {loading ? (
+                    <div className="text-center text-white/70 py-12">
+                        <p>Cargando reviews...</p>
+                    </div>
+                ) : reviews.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2  gap-6 mb-8">
+                            {reviews.map((review) => (
+                                <div key={review.id} onClick={() => handleReviewClick(review.id)}>
+                                <ReviewCard key={review.id} review={review} />
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Controles de paginación */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-center gap-4 mt-8">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1 || loading}
+                                    className="px-4 py-2 bg-white/10 backdrop-blur-sm border-2 border-blue-400/30 text-white rounded-lg hover:bg-blue-400/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    Anterior
+                                </button>
+
+                                <div className="flex items-center gap-2">
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                                        // Mostrar solo algunas páginas alrededor de la actual
+                                        if (
+                                            page === 1 ||
+                                            page === totalPages ||
+                                            (page >= currentPage - 2 && page <= currentPage + 2)
+                                        ) {
+                                            return (
+                                                <button
+                                                    key={page}
+                                                    onClick={() => handlePageChange(page)}
+                                                    disabled={loading}
+                                                    className={`px-4 py-2 rounded-lg transition-all ${
+                                                        currentPage === page
+                                                            ? 'bg-yellow-400 text-blue-950 font-semibold'
+                                                            : 'bg-white/10 backdrop-blur-sm border-2 border-blue-400/30 text-white hover:bg-blue-400/20'
+                                                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            );
+                                        } else if (
+                                            page === currentPage - 3 ||
+                                            page === currentPage + 3
+                                        ) {
+                                            return <span key={page} className="text-white/50">...</span>;
+                                        }
+                                        return null;
+                                    })}
+                                </div>
+
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages || loading}
+                                    className="px-4 py-2 bg-white/10 backdrop-blur-sm border-2 border-blue-400/30 text-white rounded-lg hover:bg-blue-400/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    Siguiente
+                                </button>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="text-center text-white/70 py-12">
+                        <p>No se encontraron reviews.</p>
+                    </div>
+                )}
             </div>
         </div>
     );
