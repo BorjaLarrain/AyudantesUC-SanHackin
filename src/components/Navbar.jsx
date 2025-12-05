@@ -13,6 +13,8 @@ const Navbar = () => {
 
                 {/* Navigation Links */}
                 <div className="flex items-center gap-6">
+                    <Link to="/explore">
+                    </Link>
                     <Link
                         to="/signin"
                         className="text-white/90 hover:text-white transition-colors"
