@@ -31,7 +31,7 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
     const totalSteps = 5;
 
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && courseId) {
             // Get current user
             const getUser = async () => {
                 const { data: { user } } = await supabase.auth.getUser();
@@ -41,8 +41,28 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
 
             // Fetch TA types
             fetchTaTypes();
+        } else {
+            // Reset cuando se cierra el modal
+            setStep(1);
+            setValidationErrors({});
+            setFormData({
+                semester: '',
+                taTypeId: '',
+                customTaType: '',
+                professor: '',
+                salaryRange: '',
+                monthHours: '',
+                monthHoursCustom: '',
+                useCustomHours: false,
+                showNewTaTypeInput: false,
+                anonymous: false,
+                rating: 0,
+                title: '',
+                description: '',
+                validationFile: null
+            });
         }
-    }, [isOpen]);
+    }, [isOpen, courseId]);
 
     const fetchTaTypes = async () => {
         try {
@@ -219,13 +239,16 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
             }
 
             // Prepare review data
-            // Note: professor field is collected but not saved as it doesn't exist in Reviews table schema
             // validated is always false regardless of whether a file is uploaded
+            // professor: save trimmed value or NULL if empty
+            const professorValue = formData.professor.trim() || null;
+            
             const reviewData = {
                 course_id: courseId,
                 user_id: formData.anonymous ? null : user.id,
                 semester: formData.semester,
                 ta_type_id: finalTaTypeId,
+                professor: professorValue,
                 min_salary: minSalary,
                 max_salary: maxSalary,
                 month_hours: finalMonthHours,
@@ -317,7 +340,11 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
         }
     }
     
+    // Invertir el array para mostrar los semestres más recientes primero (2025-2 al inicio, 2018-1 al final)
+    const semesterOptionsReversed = [...semesterOptions].reverse();
+    
     console.log('Semester options generated:', semesterOptions);
+    console.log('Semester options reversed (most recent first):', semesterOptionsReversed);
 
     // Salary range options: 0-10k, 10k-20k, ..., 290k-300k, 300k+
     const salaryRangeOptions = [];
@@ -384,7 +411,7 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                                 className="w-full px-4 py-2 bg-blue-900/50 border border-blue-400/30 rounded-lg text-white focus:outline-none focus:border-yellow-400"
                             >
                                 <option value="">Selecciona un semestre</option>
-                                {semesterOptions.map(sem => (
+                                {semesterOptionsReversed.map(sem => (
                                     <option key={sem} value={sem}>{sem}</option>
                                 ))}
                             </select>
