@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import supabase from '../config/supabaseClient';
 import validarAyudantia from '../services/ValidateService';
+import LoadingGemini from './loadingGemini';
 
 const ReviewModal = ({ isOpen, onClose, courseId }) => {
     const [step, setStep] = useState(1);
@@ -11,6 +12,8 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
     const [course, setCourse] = useState(null);
     const [validating, setValidating] = useState(false);
     const [validationResult, setValidationResult] = useState(null);
+    const [successMessage, setSuccessMessage] = useState(null); // Agregar este estado
+
     
     // Form data
     const [formData, setFormData] = useState({
@@ -224,14 +227,15 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
             try {
                 // Obtener la sigla del curso para la validación
                 const cursoSigla = course.initial || course.name;
+                setValidating(true);
                 const resultado = await validarAyudantia(formData.validationFile, cursoSigla);
+                setValidating(false);
                 
                 setValidationResult(resultado);
                 
-                if (!resultado.validado) {
+                if (resultado?.validado === false) {
                     const continuar = confirm(
-                        'El documento no pudo validar tu experiencia como ayudante de este curso. ' +
-                        '¿Deseas continuar y publicar la reseña sin validación?'
+                        'El documento entregado no es valido o no indica que fuiste ayudante de este curso. ¿Deseas continuar y publicar la reseña sin validación?'
                     );
                     if (!continuar) {
                         setValidating(false);
@@ -239,6 +243,7 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                     }
                 }
             } catch (error) {
+                setValidationResult({ validado: false, error: error.message });
                 console.error('Error en validación:', error);
                 const continuar = confirm(
                     'Hubo un error al validar el documento. ' +
@@ -337,8 +342,15 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
 
             if (insertError) throw insertError;
 
-            alert('¡Reseña publicada exitosamente!');
-            onClose();
+            // alert('¡Reseña publicada exitosamente!');
+            setSuccessMessage('¡Reseña publicada exitosamente!');
+            // Cerrar después de 2 segundos
+            setTimeout(() => {
+                onClose();
+                setSuccessMessage(null);
+            }, 2000);
+
+            // onClose();
             // Reset form
             setStep(1);
             setValidationErrors({});
@@ -445,6 +457,44 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
     }
 
     return (
+        <>
+        <LoadingGemini isOpen={validating} />
+
+        {/* Notificación de éxito */}
+        {successMessage && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-none">
+                    <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl p-6 shadow-2xl border-2 border-green-400/50 pointer-events-auto animate-[slideIn_0.3s_ease-out]">
+                        <div className="flex items-center gap-4">
+                            {/* Icono de éxito */}
+                            <div className="flex-shrink-0">
+                                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                                    <svg 
+                                        className="w-7 h-7 text-white" 
+                                        fill="none" 
+                                        stroke="currentColor" 
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path 
+                                            strokeLinecap="round" 
+                                            strokeLinejoin="round" 
+                                            strokeWidth={3} 
+                                            d="M5 13l4 4L19 7" 
+                                        />
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            {/* Mensaje */}
+                            <div>
+                                <p className="text-white font-bold text-lg">
+                                    {successMessage}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="bg-blue-950 border-2 border-blue-400/30 rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
                 {/* Header */}
@@ -795,6 +845,7 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                 </div>
             </div>
         </div>
+        </>
     );
 };
 
