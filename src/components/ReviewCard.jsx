@@ -233,7 +233,7 @@ const ReviewCard = ({ review }) => {
                         <span className="truncate text-white">{review.professor || 'N/A'}</span>
                     </div>
                 </div>
-                <div className="mt-3 pt-3 border-t border-gray-200">
+                {/* <div className="mt-3 pt-3 border-t border-gray-200">
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 text-xs text-gray-500">
                             <svg 
@@ -263,7 +263,7 @@ const ReviewCard = ({ review }) => {
                             Publicar Review
                         </button>
                     </div>
-                </div>
+                </div> */}
             </div>
         </div>
     );
