@@ -1,7 +1,22 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import { UserAuth } from './context/AuthContext';
 
 function App() {
+  const { session, loading } = UserAuth();
+  const navigate = useNavigate();
+
+  const handlePublishReview = () => {
+    if (loading) return; // Esperar a que cargue la autenticación
+    
+    if (!session) {
+      // Si no está logueado, redirigir a signin
+      navigate('/signin');
+    } else {
+      // Si está logueado, redirigir a explore donde puede seleccionar un curso
+      navigate('/explore');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-950 via-blue-900 to-blue-950">
@@ -65,15 +80,15 @@ function App() {
             Explorar Reviews
           </Link>
 
-          <Link
-            to="/signin"
+          <button
+            onClick={handlePublishReview}
             className="px-8 py-4 bg-transparent border-2 border-blue-400 text-white font-semibold rounded-full flex items-center gap-3 transition-all duration-200 hover:bg-blue-400/20 hover:border-blue-300 shadow-lg hover:shadow-xl hover:scale-105"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Publicar Review
-          </Link>
+          </button>
         </div>
       </div>
     </div>

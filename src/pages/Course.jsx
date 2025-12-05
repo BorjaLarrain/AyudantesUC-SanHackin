@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ReviewModal from '../components/ReviewModal';
 import supabase from '../config/supabaseClient';
 
 const Course = () => {
     const { id } = useParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [course, setCourse] = useState(null);
     const [courseStats, setCourseStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -88,6 +89,16 @@ const Course = () => {
 
         fetchCourse();
     }, [id]);
+
+    // Abrir el modal automáticamente si viene el query parameter publish=true
+    useEffect(() => {
+        const shouldPublish = searchParams.get('publish') === 'true';
+        if (shouldPublish && !loading && course) {
+            setIsReviewModalOpen(true);
+            // Limpiar el query parameter después de abrir el modal
+            setSearchParams({});
+        }
+    }, [searchParams, loading, course, setSearchParams]);
 
     if (loading) {
         return (

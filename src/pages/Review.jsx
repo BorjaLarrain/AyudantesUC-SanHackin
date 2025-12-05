@@ -1,14 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { UserAuth } from '../context/AuthContext';
 import supabase from '../config/supabaseClient';
 
 const Review = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { session, loading: authLoading } = UserAuth();
     const [review, setReview] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    const handlePublishReview = () => {
+        if (authLoading) return; // Esperar a que cargue la autenticación
+        
+        if (!session) {
+            // Si no está logueado, redirigir a signin
+            navigate('/signin');
+        } else {
+            // Si está logueado, redirigir a la página del curso con el modal abierto
+            const courseId = review?.Courses?.id;
+            if (courseId) {
+                navigate(`/course/${courseId}?publish=true`);
+            } else {
+                // Si no hay courseId, redirigir a explore
+                navigate('/explore');
+            }
+        }
+    };
 
     useEffect(() => {
         const fetchReview = async () => {
@@ -368,12 +388,12 @@ const Review = () => {
                             <p className="text-sm text-gray-600 mb-4">
                                 Comparte tu experiencia y ayuda a otros estudiantes.
                             </p>
-                            <Link
-                                to="/explore"
+                            <button
+                                onClick={handlePublishReview}
                                 className="block w-full text-center px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                             >
                                 Publicar mi Review
-                            </Link>
+                            </button>
                         </div>
                     </div>
                 </div>
