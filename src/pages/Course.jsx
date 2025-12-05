@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ReviewModal from '../components/ReviewModal';
 import ReviewCard from '../components/ReviewCard';
@@ -97,7 +97,7 @@ const Course = () => {
                         .from('TaTypes')
                         .select('id, name')
                         .order('name');
-                    
+
                     if (taTypesError) {
                         console.error('Error fetching TA types:', taTypesError);
                     } else {
@@ -106,28 +106,28 @@ const Course = () => {
                 }
             } catch (err) {
                 console.error('Error fetching course:', err);
-                
+
                 // Provide more detailed error message
                 let errorMessage = 'Error al cargar el curso';
-                
+
                 if (err.message) {
                     errorMessage = err.message;
                 }
-                
+
                 if (err.code) {
                     errorMessage = `Error ${err.code}: ${err.message || 'No se pudo acceder a la base de datos'}`;
                 }
-                
+
                 // Check for API key issues
                 if (err.message?.includes('secret API key') || err.message?.includes('Forbidden')) {
                     errorMessage = 'Error de configuración: Estás usando la clave incorrecta. Verifica que VITE_SUPABASE_ANON_KEY en tu archivo .env use la clave "anon" (no "service_role").';
                 }
-                
+
                 // Check if it's an RLS policy issue
                 if (err.code === 'PGRST301' || err.message?.includes('permission denied') || err.code === '42501') {
                     errorMessage = 'No tienes permiso para ver este curso. Verifica las políticas de seguridad (RLS) en Supabase.';
                 }
-                
+
                 setError(errorMessage);
             } finally {
                 setLoading(false);
@@ -145,8 +145,8 @@ const Course = () => {
         } else {
             // Filtrar por tipo de ayudantía
             const filtered = allReviews.filter(
-                review => review.ta_type_id === parseInt(selectedTaTypeId) || 
-                         review.TaTypes?.id === parseInt(selectedTaTypeId)
+                review => review.ta_type_id === parseInt(selectedTaTypeId) ||
+                    review.TaTypes?.id === parseInt(selectedTaTypeId)
             );
             setCourseReviews(filtered);
         }
@@ -199,6 +199,26 @@ const Course = () => {
         <div className="min-h-screen bg-gradient-to-b from-blue-950 via-blue-900 to-blue-950">
             <Navbar />
             <div className="relative z-10 max-w-4xl mx-auto px-6 py-16">
+                {/* Botón para volver a Explore */}
+                <Link
+                    to="/courses"
+                    className="inline-flex items-center text-white/90 hover:text-white mb-6 transition-colors"
+                >
+                    <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                        />
+                    </svg>
+                    Volver a Explorar
+                </Link>
                 <div className="bg-blue-950/50 backdrop-blur-sm border-2 border-blue-400/20 rounded-2xl p-8 shadow-xl">
                     <div className="mb-6">
                         <h1 className="text-4xl font-bold text-white mb-2">
@@ -211,7 +231,7 @@ const Course = () => {
                         </div>
                         <button
                             onClick={() => setIsReviewModalOpen(true)}
-                            className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 flex items-center gap-2"
+                            className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 flex items-center gap-2 hover:cursor-pointer"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
@@ -246,7 +266,7 @@ const Course = () => {
                                     <h3 className="text-white font-semibold text-lg">Salario Promedio</h3>
                                 </div>
                                 <p className="text-yellow-400 text-2xl font-bold">
-                                    {courseStats.avg_salary_midpoint 
+                                    {courseStats.avg_salary_midpoint
                                         ? `$${Math.round(courseStats.avg_salary_midpoint).toLocaleString('es-CL')}`
                                         : 'N/A'}
                                 </p>
@@ -293,7 +313,7 @@ const Course = () => {
                                     <span className="text-yellow-400 ml-2">({courseReviews.length})</span>
                                 )}
                             </h2>
-                            
+
                             {/* Filtro por tipo de ayudantía */}
                             {taTypes.length > 0 && (
                                 <div className="flex items-center gap-3">

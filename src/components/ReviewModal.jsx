@@ -251,6 +251,7 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                 );
                 if (!continuar) {
                     setValidating(false);
+                    setValidationResult({ validado: false });
                     return;
                 }
             } finally {
@@ -310,6 +311,14 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
             // professor: save trimmed value or NULL if empty
             const professorValue = formData.professor.trim() || null;
             
+            // Get user display name from metadata if not anonymous
+            const authorName = formData.anonymous 
+                ? null 
+                : (user?.user_metadata?.display_name || 
+                   user?.user_metadata?.full_name || 
+                   user?.email?.split('@')[0] || 
+                   null);
+            
             const reviewData = {
                 course_id: courseId,
                 user_id: formData.anonymous ? null : user.id,
@@ -323,7 +332,8 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                 title: formData.title,
                 description: formData.description,
                 anonymous: formData.anonymous,
-                validated: validationResult?.validado || false
+                validated: validationResult.validado,
+                author_name: authorName
             };
 
             const { error: insertError } = await supabase

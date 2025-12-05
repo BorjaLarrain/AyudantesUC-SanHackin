@@ -264,6 +264,14 @@ const EditReviewModal = ({ isOpen, onClose, review, onUpdate }) => {
 
             const professorValue = formData.professor.trim() || null;
 
+            // Get user display name from metadata if not anonymous
+            const authorName = formData.anonymous 
+                ? null 
+                : (user?.user_metadata?.display_name || 
+                   user?.user_metadata?.full_name || 
+                   user?.email?.split('@')[0] || 
+                   null);
+
             const reviewData = {
                 user_id: formData.anonymous ? null : user.id,
                 semester: formData.semester,
@@ -276,7 +284,8 @@ const EditReviewModal = ({ isOpen, onClose, review, onUpdate }) => {
                 title: formData.title,
                 description: formData.description,
                 anonymous: formData.anonymous,
-                validated: false
+                validated: false,
+                author_name: authorName
             };
 
             const { error: updateError } = await supabase
