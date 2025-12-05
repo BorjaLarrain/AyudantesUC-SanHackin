@@ -23,7 +23,8 @@ export const router = createBrowserRouter([
     {
         path: "/explore",
         element: <Explore />
-    }
+    },
+    {
         path: "/course/:id?",
         element: <Course />,
     },
