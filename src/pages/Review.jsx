@@ -234,7 +234,7 @@ const Review = () => {
             <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
                 {/* Botón para volver */}
                 <Link
-                    to="/explore"
+                    to={review?.Courses?.id ? `/course/${review.Courses.id}` : "/explore"}
                     className="inline-flex items-center text-white/90 hover:text-white mb-6 transition-colors"
                 >
                     <svg
@@ -250,7 +250,7 @@ const Review = () => {
                             d="M10 19l-7-7m0 0l7-7m-7 7h18"
                         />
                     </svg>
-                    Volver a Explore
+                    {review?.Courses?.id ? 'Volver al Curso' : 'Volver a Explorar'}
                 </Link>
 
                 {/* Botones de editar/eliminar si es el dueño */}

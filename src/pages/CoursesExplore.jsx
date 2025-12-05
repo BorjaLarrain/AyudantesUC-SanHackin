@@ -391,7 +391,7 @@ const CoursesExplore = () => {
                         )}
                         <button
                             onClick={clearFilters}
-                            className="px-6 py-3 bg-transparent border-2 border-blue-400 text-white font-semibold rounded-lg hover:bg-blue-400/20 transition-all duration-200"
+                            className="px-6 py-3 bg-transparent border-2 border-blue-400 text-white font-semibold rounded-lg hover:bg-blue-400/20 transition-all duration-200 hover:cursor-pointer"
                         >
                             Limpiar filtros
                         </button>
@@ -417,7 +417,7 @@ const CoursesExplore = () => {
                                 <button
                                     onClick={() => handlePageChange(currentPage - 1)}
                                     disabled={currentPage === 1 || loading}
-                                    className="px-4 py-2 bg-white/10 backdrop-blur-sm border-2 border-blue-400/30 text-white rounded-lg hover:bg-blue-400/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    className="px-4 py-2 bg-white/10 backdrop-blur-sm border-2 border-blue-400/30 text-white rounded-lg hover:bg-blue-400/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:cursor-pointer"
                                 >
                                     Anterior
                                 </button>
@@ -437,8 +437,8 @@ const CoursesExplore = () => {
                                                     disabled={loading}
                                                     className={`px-4 py-2 rounded-lg transition-all ${
                                                         currentPage === page
-                                                            ? 'bg-yellow-400 text-blue-950 font-semibold'
-                                                            : 'bg-white/10 backdrop-blur-sm border-2 border-blue-400/30 text-white hover:bg-blue-400/20'
+                                                            ? 'bg-yellow-400 text-blue-950 font-semibold hover:cursor-pointer'
+                                                            : 'bg-white/10 backdrop-blur-sm border-2 border-blue-400/30 text-white hover:bg-blue-400/20 hover:cursor-pointer'
                                                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                                                 >
                                                     {page}
@@ -457,7 +457,7 @@ const CoursesExplore = () => {
                                 <button
                                     onClick={() => handlePageChange(currentPage + 1)}
                                     disabled={currentPage === totalPages || loading}
-                                    className="px-4 py-2 bg-white/10 backdrop-blur-sm border-2 border-blue-400/30 text-white rounded-lg hover:bg-blue-400/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    className="px-4 py-2 bg-white/10 backdrop-blur-sm border-2 border-blue-400/30 text-white rounded-lg hover:bg-blue-400/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:cursor-pointer"
                                 >
                                     Siguiente
                                 </button>
