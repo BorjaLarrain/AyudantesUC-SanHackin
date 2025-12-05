@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ReviewModal from '../components/ReviewModal';
+import ReviewCard from '../components/ReviewCard';
 import supabase from '../config/supabaseClient';
 
 const Course = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [course, setCourse] = useState(null);
     const [courseStats, setCourseStats] = useState(null);
+    const [courseReviews, setCourseReviews] = useState([]);
+    const [allReviews, setAllReviews] = useState([]); // Guardar todas las reviews sin filtrar
+    const [taTypes, setTaTypes] = useState([]);
+    const [selectedTaTypeId, setSelectedTaTypeId] = useState('');
     const [loading, setLoading] = useState(true);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
@@ -56,31 +63,71 @@ const Course = () => {
                         // No reviews yet, set empty stats
                         setCourseStats(null);
                     }
+
+                    // Fetch reviews for this course
+                    setReviewsLoading(true);
+                    const { data: reviewsData, error: reviewsError } = await supabase
+                        .from('Reviews')
+                        .select(`
+                            *,
+                            Courses (
+                                id,
+                                name,
+                                initial
+                            ),
+                            TaTypes (
+                                id,
+                                name
+                            )
+                        `)
+                        .eq('course_id', parseInt(id))
+                        .order('created_at', { ascending: false });
+
+                    if (reviewsError) {
+                        console.error('Error fetching course reviews:', reviewsError);
+                    } else {
+                        const reviews = reviewsData || [];
+                        setAllReviews(reviews);
+                        setCourseReviews(reviews);
+                    }
+                    setReviewsLoading(false);
+
+                    // Fetch TA types for filter
+                    const { data: taTypesData, error: taTypesError } = await supabase
+                        .from('TaTypes')
+                        .select('id, name')
+                        .order('name');
+
+                    if (taTypesError) {
+                        console.error('Error fetching TA types:', taTypesError);
+                    } else {
+                        setTaTypes(taTypesData || []);
+                    }
                 }
             } catch (err) {
                 console.error('Error fetching course:', err);
-                
+
                 // Provide more detailed error message
                 let errorMessage = 'Error al cargar el curso';
-                
+
                 if (err.message) {
                     errorMessage = err.message;
                 }
-                
+
                 if (err.code) {
                     errorMessage = `Error ${err.code}: ${err.message || 'No se pudo acceder a la base de datos'}`;
                 }
-                
+
                 // Check for API key issues
                 if (err.message?.includes('secret API key') || err.message?.includes('Forbidden')) {
                     errorMessage = 'Error de configuración: Estás usando la clave incorrecta. Verifica que VITE_SUPABASE_ANON_KEY en tu archivo .env use la clave "anon" (no "service_role").';
                 }
-                
+
                 // Check if it's an RLS policy issue
                 if (err.code === 'PGRST301' || err.message?.includes('permission denied') || err.code === '42501') {
                     errorMessage = 'No tienes permiso para ver este curso. Verifica las políticas de seguridad (RLS) en Supabase.';
                 }
-                
+
                 setError(errorMessage);
             } finally {
                 setLoading(false);
@@ -89,6 +136,21 @@ const Course = () => {
 
         fetchCourse();
     }, [id]);
+
+    // Filtrar reviews cuando cambia el tipo de ayudantía seleccionado
+    useEffect(() => {
+        if (selectedTaTypeId === '') {
+            // Si no hay filtro seleccionado, mostrar todas las reviews
+            setCourseReviews(allReviews);
+        } else {
+            // Filtrar por tipo de ayudantía
+            const filtered = allReviews.filter(
+                review => review.ta_type_id === parseInt(selectedTaTypeId) ||
+                    review.TaTypes?.id === parseInt(selectedTaTypeId)
+            );
+            setCourseReviews(filtered);
+        }
+    }, [selectedTaTypeId, allReviews]);
 
     // Abrir el modal automáticamente si viene el query parameter publish=true
     useEffect(() => {
@@ -137,6 +199,26 @@ const Course = () => {
         <div className="min-h-screen bg-gradient-to-b from-blue-950 via-blue-900 to-blue-950">
             <Navbar />
             <div className="relative z-10 max-w-4xl mx-auto px-6 py-16">
+                {/* Botón para volver a Explore */}
+                <Link
+                    to="/courses"
+                    className="inline-flex items-center text-white/90 hover:text-white mb-6 transition-colors"
+                >
+                    <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                        />
+                    </svg>
+                    Volver a Explorar
+                </Link>
                 <div className="bg-blue-950/50 backdrop-blur-sm border-2 border-blue-400/20 rounded-2xl p-8 shadow-xl">
                     <div className="mb-6">
                         <h1 className="text-4xl font-bold text-white mb-2">
@@ -149,7 +231,7 @@ const Course = () => {
                         </div>
                         <button
                             onClick={() => setIsReviewModalOpen(true)}
-                            className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 flex items-center gap-2"
+                            className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 flex items-center gap-2 hover:cursor-pointer"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
@@ -184,7 +266,7 @@ const Course = () => {
                                     <h3 className="text-white font-semibold text-lg">Salario Promedio</h3>
                                 </div>
                                 <p className="text-yellow-400 text-2xl font-bold">
-                                    {courseStats.avg_salary_midpoint 
+                                    {courseStats.avg_salary_midpoint
                                         ? `$${Math.round(courseStats.avg_salary_midpoint).toLocaleString('es-CL')}`
                                         : 'N/A'}
                                 </p>
@@ -221,6 +303,60 @@ const Course = () => {
                             </p>
                         </div>
                     )}
+
+                    {/* Reviews Section */}
+                    <div className="mt-12">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                            <h2 className="text-3xl font-bold text-white">
+                                Reseñas de este curso
+                                {courseReviews.length > 0 && (
+                                    <span className="text-yellow-400 ml-2">({courseReviews.length})</span>
+                                )}
+                            </h2>
+
+                            {/* Filtro por tipo de ayudantía */}
+                            {taTypes.length > 0 && (
+                                <div className="flex items-center gap-3">
+                                    <label htmlFor="taTypeFilter" className="text-white font-medium">
+                                        Filtrar por tipo:
+                                    </label>
+                                    <select
+                                        id="taTypeFilter"
+                                        value={selectedTaTypeId}
+                                        onChange={(e) => setSelectedTaTypeId(e.target.value)}
+                                        className="px-4 py-2 bg-blue-900/50 border border-blue-400/30 rounded-lg text-white focus:outline-none focus:border-yellow-400 transition-colors min-w-[200px]"
+                                    >
+                                        <option value="">Todos los tipos</option>
+                                        {taTypes.map(type => (
+                                            <option key={type.id} value={type.id}>
+                                                {type.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
+                        {reviewsLoading ? (
+                            <div className="text-center text-white/70 py-8">
+                                <p>Cargando reseñas...</p>
+                            </div>
+                        ) : courseReviews.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {courseReviews.map((review) => (
+                                    <div key={review.id} onClick={() => navigate(`/review/${review.id}`)}>
+                                        <ReviewCard review={review} className="hover:pointer-cursor" />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-blue-900/20 border border-blue-400/10 rounded-xl p-6">
+                                <p className="text-white/70 text-center">
+                                    Aún no hay reseñas para este curso. ¡Sé el primero en compartir tu experiencia!
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
             <ReviewModal

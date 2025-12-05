@@ -3,6 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { UserAuth } from '../context/AuthContext';
 import supabase from '../config/supabaseClient';
+import EditReviewModal from '../components/EditReviewModal';
+import ConfirmModal from '../components/ConfirmModal';
+import NotificationModal from '../components/NotificationModal';
 
 const Review = () => {
     const { id } = useParams();
@@ -11,10 +14,13 @@ const Review = () => {
     const [review, setReview] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [notification, setNotification] = useState({ isOpen: false, title: '', message: '', type: 'success' });
 
     const handlePublishReview = () => {
         if (authLoading) return; // Esperar a que cargue la autenticación
-        
+
         if (!session) {
             // Si no está logueado, redirigir a signin
             navigate('/signin');
@@ -27,6 +33,84 @@ const Review = () => {
                 // Si no hay courseId, redirigir a explore
                 navigate('/explore');
             }
+        }
+    };
+
+    // Función para verificar si el usuario es el dueño de la review
+    const isOwner = () => {
+        if (!session || !review) return false;
+        return session.user.id === review.user_id;
+    };
+
+    // Función para eliminar la review
+    const handleDelete = async () => {
+        if (!review) return;
+
+        try {
+            const { error: deleteError } = await supabase
+                .from('Reviews')
+                .delete()
+                .eq('id', review.id);
+
+            if (deleteError) throw deleteError;
+
+            setNotification({
+                isOpen: true,
+                title: 'Reseña eliminada',
+                message: 'La reseña ha sido eliminada exitosamente.',
+                type: 'success'
+            });
+
+            // Redirigir después de un breve delay para que se vea la notificación
+            setTimeout(() => {
+                navigate('/explore');
+            }, 1500);
+        } catch (error) {
+            console.error('Error deleting review:', error);
+            setNotification({
+                isOpen: true,
+                title: 'Error',
+                message: 'Error al eliminar la reseña: ' + error.message,
+                type: 'error'
+            });
+        }
+    };
+
+    // Función para refrescar la review después de editar
+    const refreshReview = async () => {
+        if (!id) return;
+
+        try {
+            setLoading(true);
+            const { data, error: fetchError } = await supabase
+                .from('Reviews')
+                .select(`
+                    *,
+                    Courses (
+                        id,
+                        name,
+                        initial
+                    ),
+                    TaTypes (
+                        id,
+                        name
+                    )
+                `)
+                .eq('id', id)
+                .single();
+
+            if (fetchError) {
+                console.error('Error fetching review:', fetchError);
+                setError('No se pudo cargar la review');
+            } else {
+                setReview(data);
+                setError(null);
+            }
+        } catch (err) {
+            console.error('Error:', err);
+            setError('Error al cargar la review');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -112,7 +196,7 @@ const Review = () => {
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-center text-white">
                         <p className="text-xl mb-4">{error || 'Review no encontrada'}</p>
-                        <Link 
+                        <Link
                             to="/explore"
                             className="px-6 py-3 bg-yellow-400 text-blue-950 font-semibold rounded-lg hover:bg-yellow-500 transition"
                         >
@@ -146,11 +230,11 @@ const Review = () => {
             </div>
 
             <Navbar />
-            
+
             <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
                 {/* Botón para volver */}
-                <Link 
-                    to="/explore"
+                <Link
+                    to={review?.Courses?.id ? `/course/${review.Courses.id}` : "/explore"}
                     className="inline-flex items-center text-white/90 hover:text-white mb-6 transition-colors"
                 >
                     <svg
@@ -166,8 +250,32 @@ const Review = () => {
                             d="M10 19l-7-7m0 0l7-7m-7 7h18"
                         />
                     </svg>
-                    Volver a Explore
+                    {review?.Courses?.id ? 'Volver al Curso' : 'Volver a Explorar'}
                 </Link>
+
+                {/* Botones de editar/eliminar si es el dueño */}
+                {isOwner() && (
+                    <div className="flex gap-4 mb-6">
+                        <button
+                            onClick={() => setIsEditModalOpen(true)}
+                            className="px-4 py-2 bg-yellow-400 text-blue-950 font-semibold rounded-lg hover:bg-yellow-500 transition-colors flex items-center gap-2 hover:cursor-pointer"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Editar Reseña
+                        </button>
+                        <button
+                            onClick={handleDelete}
+                            className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 hover:cursor-pointer"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Eliminar Reseña
+                        </button>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Columna principal - Card de Review */}
@@ -181,16 +289,16 @@ const Review = () => {
                                     </div>
                                     {review.validated ? (
                                         <div className="flex items-center gap-1">
-                                            <svg 
-                                                xmlns="http://www.w3.org/2000/svg" 
-                                                width="20" 
-                                                height="20" 
-                                                viewBox="0 0 24 24" 
-                                                fill="none" 
-                                                stroke="currentColor" 
-                                                strokeWidth="2" 
-                                                strokeLinecap="round" 
-                                                strokeLinejoin="round" 
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="20"
+                                                height="20"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
                                                 className="h-5 w-5 text-green-500"
                                             >
                                                 <circle cx="12" cy="12" r="10"></circle>
@@ -208,56 +316,56 @@ const Review = () => {
                                         {[1, 2, 3, 4, 5].map((star) => {
                                             const isFull = star <= rating;
                                             const isHalf = star > rating && star - 0.5 <= rating;
-                                            
+
                                             return (
                                                 <div key={star} className="relative h-5 w-5">
                                                     {/* Estrella de fondo (siempre gris) */}
-                                                    <svg 
-                                                        xmlns="http://www.w3.org/2000/svg" 
-                                                        width="24" 
-                                                        height="24" 
-                                                        viewBox="0 0 24 24" 
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        width="24"
+                                                        height="24"
+                                                        viewBox="0 0 24 24"
                                                         fill="none"
-                                                        stroke="currentColor" 
-                                                        strokeWidth="2" 
-                                                        strokeLinecap="round" 
-                                                        strokeLinejoin="round" 
+                                                        stroke="currentColor"
+                                                        strokeWidth="2"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
                                                         className="h-5 w-5 text-gray-300 absolute inset-0"
                                                     >
                                                         <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"></path>
                                                     </svg>
-                                                    
+
                                                     {/* Estrella amarilla (completa o media) */}
                                                     {isFull && (
-                                                        <svg 
-                                                            xmlns="http://www.w3.org/2000/svg" 
-                                                            width="24" 
-                                                            height="24" 
-                                                            viewBox="0 0 24 24" 
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            width="24"
+                                                            height="24"
+                                                            viewBox="0 0 24 24"
                                                             fill="currentColor"
-                                                            stroke="currentColor" 
-                                                            strokeWidth="2" 
-                                                            strokeLinecap="round" 
-                                                            strokeLinejoin="round" 
+                                                            stroke="currentColor"
+                                                            strokeWidth="2"
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
                                                             className="h-5 w-5 text-yellow-400 absolute inset-0"
                                                         >
                                                             <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"></path>
                                                         </svg>
                                                     )}
-                                                    
+
                                                     {/* Media estrella */}
                                                     {isHalf && (
                                                         <div className="absolute inset-0 overflow-hidden" style={{ width: '50%' }}>
-                                                            <svg 
-                                                                xmlns="http://www.w3.org/2000/svg" 
-                                                                width="24" 
-                                                                height="24" 
-                                                                viewBox="0 0 24 24" 
+                                                            <svg
+                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                width="24"
+                                                                height="24"
+                                                                viewBox="0 0 24 24"
                                                                 fill="currentColor"
-                                                                stroke="currentColor" 
-                                                                strokeWidth="2" 
-                                                                strokeLinecap="round" 
-                                                                strokeLinejoin="round" 
+                                                                stroke="currentColor"
+                                                                strokeWidth="2"
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
                                                                 className="h-5 w-5 text-yellow-400"
                                                             >
                                                                 <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"></path>
@@ -276,6 +384,28 @@ const Review = () => {
                                 {review.title}
                             </h1>
 
+                            {/* Autor (si no es anónimo) */}
+                            {!review.anonymous && review.author_name && (
+                                <div className="flex items-center gap-2 mb-4">
+                                    <svg 
+                                        xmlns="http://www.w3.org/2000/svg" 
+                                        width="20" 
+                                        height="20" 
+                                        viewBox="0 0 24 24" 
+                                        fill="none" 
+                                        stroke="currentColor" 
+                                        strokeWidth="2" 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        className="h-5 w-5 text-white/70"
+                                    >
+                                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
+                                    <span className="text-white/70 text-sm">Por {review.author_name}</span>
+                                </div>
+                            )}
+
                             {/* Descripción */}
                             <div className="mb-6">
                                 <p className="text-white whitespace-pre-wrap leading-relaxed">
@@ -288,16 +418,16 @@ const Review = () => {
                             <div className="grid grid-cols-2 gap-6 pt-6 border-t border-gray-200">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
-                                        <svg 
-                                            xmlns="http://www.w3.org/2000/svg" 
-                                            width="20" 
-                                            height="20" 
-                                            viewBox="0 0 24 24" 
-                                            fill="none" 
-                                            stroke="currentColor" 
-                                            strokeWidth="2" 
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="20"
+                                            height="20"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
                                             className="h-5 w-5 text-green-600"
                                         >
                                             <line x1="12" x2="12" y1="2" y2="22"></line>
@@ -313,16 +443,16 @@ const Review = () => {
 
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
-                                        <svg 
-                                            xmlns="http://www.w3.org/2000/svg" 
-                                            width="20" 
-                                            height="20" 
-                                            viewBox="0 0 24 24" 
-                                            fill="none" 
-                                            stroke="currentColor" 
-                                            strokeWidth="2" 
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="20"
+                                            height="20"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
                                             className="h-5 w-5 text-blue-600"
                                         >
                                             <circle cx="12" cy="12" r="10"></circle>
@@ -337,32 +467,32 @@ const Review = () => {
                                     <line x1="12" x2="12" y1="2" y2="22"></line>
                                     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                                 </div>
-                            
-                            
-                            {/* Metadata: Semestre y Fecha */}
-                            <div className="flex items-center gap-2 text-white text-sm mb-6">
-                                <svg 
-                                    xmlns="http://www.w3.org/2000/svg" 
-                                    width="16" 
-                                    height="16" 
-                                    viewBox="0 0 24 24" 
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    strokeWidth="2" 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round" 
-                                    className="h-4 w-4"
-                                >
-                                    <path d="M8 2v4"></path>
-                                    <path d="M16 2v4"></path>
-                                    <rect width="18" height="18" x="3" y="4" rx="2"></rect>
-                                    <path d="M3 10h18"></path>
-                                </svg>
-                                
-                                <span>Publicada el {formattedDate}</span>
+
+
+                                {/* Metadata: Semestre y Fecha */}
+                                <div className="flex items-center gap-2 text-white text-sm mb-6">
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="h-4 w-4"
+                                    >
+                                        <path d="M8 2v4"></path>
+                                        <path d="M16 2v4"></path>
+                                        <rect width="18" height="18" x="3" y="4" rx="2"></rect>
+                                        <path d="M3 10h18"></path>
+                                    </svg>
+
+                                    <span>Publicada el {formattedDate}</span>
+                                </div>
                             </div>
-                            </div>
-                            
+
                         </div>
                     </div>
 
@@ -371,16 +501,16 @@ const Review = () => {
                         {/* Card de Profesor/a */}
                         <div className="bg-white/10 rounded-lg shadow-xl p-6">
                             <div className="flex items-center gap-2 mb-4">
-                                <svg 
-                                    xmlns="http://www.w3.org/2000/svg" 
-                                    width="20" 
-                                    height="20" 
-                                    viewBox="0 0 24 24" 
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    strokeWidth="2" 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round" 
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
                                     className="h-5 w-5 text-white"
                                 >
                                     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
@@ -389,23 +519,23 @@ const Review = () => {
                                 <h2 className="text-lg font-semibold text-white">Profesor/a</h2>
                             </div>
                             <p className="text-sm text-white">
-                                {review.professor || 'N/A'}
+                                {review.professor || 'El profesor encargado no fue registrado.'}
                             </p>
                         </div>
 
                         {/* Card de Información del Curso */}
                         <div className="bg-white/10 rounded-lg shadow-xl p-6">
                             <div className="flex items-center gap-2 mb-4">
-                                <svg 
-                                    xmlns="http://www.w3.org/2000/svg" 
-                                    width="20" 
-                                    height="20" 
-                                    viewBox="0 0 24 24" 
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    strokeWidth="2" 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round" 
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
                                     className="h-5 w-5 text-white"
                                 >
                                     <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
@@ -423,7 +553,7 @@ const Review = () => {
                         </div>
 
                         {/* Card de Call to Action */}
-                        <div className="bg-white/10 rounded-lg shadow-xl p-6">
+                        {session ? (<div className="bg-white/10 rounded-lg shadow-xl p-6">
                             <h2 className="text-lg font-semibold text-white mb-2">
                                 ¿También fuiste ayudante de este curso?
                             </h2>
@@ -432,14 +562,34 @@ const Review = () => {
                             </p>
                             <button
                                 onClick={handlePublishReview}
-                                className="block w-full text-center px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                                className="block w-full text-center px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer"
                             >
                                 Publicar mi Review
                             </button>
-                        </div>
+                        </div>) : (<div className="bg-white/10 rounded-lg shadow-xl p-6">
+                            <h2 className="text-lg font-semibold text-white mb-2">
+                                ¿También fuiste ayudante de este curso?
+                            </h2>
+                            <p className="text-sm text-white mb-4">
+                                Créate una cuenta / inicia sesión y comparte tu experiencia para ayudar a otros estudiantes.
+                            </p>
+                            <Link
+                                to="/signin"
+                                className="block w-full text-center px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer">
+                                Registrarse / Iniciar sesión
+                            </Link>
+                        </div>)}
                     </div>
                 </div>
             </div>
+
+            {/* Modal de edición */}
+            <EditReviewModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                review={review}
+                onUpdate={refreshReview}
+            />
         </div>
     );
 };

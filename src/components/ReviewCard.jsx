@@ -233,29 +233,52 @@ const ReviewCard = ({ review }) => {
                         <span className="truncate text-white">{review.professor || 'N/A'}</span>
                     </div>
                 </div>
-                <div className="mt-3 pt-3 border-t border-gray-200">
+                {/* <div className="mt-3 pt-3 border-t border-gray-200">
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 text-xs text-gray-500">
-                            <svg 
-                                xmlns="http://www.w3.org/2000/svg" 
-                                width="24" 
-                                height="24" 
-                                viewBox="0 0 24 24" 
-                                fill="none" 
-                                stroke="currentColor" 
-                                strokeWidth="2" 
-                                strokeLinecap="round" 
-                                strokeLinejoin="round" 
-                                className="h-3 w-3"
-                            >
-                                <path d="M12 7v14"></path>
-                                <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
-                            </svg>
-                            <span className="truncate text-white">Ingeniería • San Joaquín</span>
+                            {!review.anonymous && review.author_name ? (
+                                <div className="flex items-center gap-2">
+                                    <svg 
+                                        xmlns="http://www.w3.org/2000/svg" 
+                                        width="24" 
+                                        height="24" 
+                                        viewBox="0 0 24 24" 
+                                        fill="none" 
+                                        stroke="currentColor" 
+                                        strokeWidth="2" 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        className="h-3 w-3 text-white"
+                                    >
+                                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
+                                    <span className="truncate text-white">Por {review.author_name}</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <svg 
+                                        xmlns="http://www.w3.org/2000/svg" 
+                                        width="24" 
+                                        height="24" 
+                                        viewBox="0 0 24 24" 
+                                        fill="none" 
+                                        stroke="currentColor" 
+                                        strokeWidth="2" 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        className="h-3 w-3"
+                                    >
+                                        <path d="M12 7v14"></path>
+                                        <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
+                                    </svg>
+                                    <span className="truncate text-white">Ingeniería • San Joaquín</span>
+                                </div>
+                            )}
                         </div>
                         <button
                             onClick={handlePublishReview}
-                            className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-semibold rounded-lg text-xs transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1.5 whitespace-nowrap"
+                            className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-semibold rounded-lg text-xs transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-1.5 whitespace-nowrap hover:cursor-pointer"
                         >
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -263,7 +286,7 @@ const ReviewCard = ({ review }) => {
                             Publicar Review
                         </button>
                     </div>
-                </div>
+                </div> */}
             </div>
         </div>
     );

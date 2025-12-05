@@ -1,20 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import supabase from '../config/supabaseClient';
-import validarAyudantia from '../services/ValidateService';
-import LoadingGemini from './loadingGemini';
 
-const ReviewModal = ({ isOpen, onClose, courseId }) => {
+const EditReviewModal = ({ isOpen, onClose, review, onUpdate }) => {
     const [step, setStep] = useState(1);
     const [taTypes, setTaTypes] = useState([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [user, setUser] = useState(null);
-    const [course, setCourse] = useState(null);
-    const [validating, setValidating] = useState(false);
-    const [validationResult, setValidationResult] = useState(null);
-    const [successMessage, setSuccessMessage] = useState(null); // Agregar este estado
 
-    
     // Form data
     const [formData, setFormData] = useState({
         semester: '',
@@ -37,29 +30,59 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
 
     const totalSteps = 5;
 
-    useEffect(() => {
-        const fetchCourse = async () => {
-            if (courseId) {
-                try {
-                    const { data, error } = await supabase
-                        .from('Courses')
-                        .select('id, name, initial')
-                        .eq('id', courseId)
-                        .single();
-                    
-                    if (error) {
-                        console.error('Error fetching course:', error);
-                    } else {
-                        setCourse(data);
-                    }
-                } catch (err) {
-                    console.error('Error:', err);
-                }
-            }
-        };
+    // Convert review data to form format
+    const convertReviewToFormData = (review) => {
+        if (!review) return;
 
-        if (isOpen && courseId) {
-            fetchCourse();
+        // Convert salary range
+        let salaryRange = '';
+        if (review.min_salary !== null && review.max_salary !== null) {
+            if (review.min_salary >= 300000 && review.max_salary === null) {
+                salaryRange = '300000-plus';
+            } else {
+                salaryRange = `${review.min_salary}-${review.max_salary}`;
+            }
+        }
+
+        // Convert month hours
+        let monthHours = '';
+        let useCustomHours = false;
+        let monthHoursCustom = '';
+        if (review.month_hours !== null) {
+            // Check if it matches a standard range
+            const hours = review.month_hours;
+            const foundRange = monthHoursOptions.find(opt => {
+                const [min, max] = opt.value.split('-').map(Number);
+                return hours >= min && hours < max;
+            });
+            if (foundRange) {
+                monthHours = foundRange.value;
+            } else {
+                useCustomHours = true;
+                monthHoursCustom = hours.toString();
+            }
+        }
+
+        setFormData({
+            semester: review.semester || '',
+            taTypeId: review.ta_type_id?.toString() || '',
+            customTaType: '',
+            professor: review.professor || '',
+            salaryRange: salaryRange,
+            monthHours: monthHours,
+            monthHoursCustom: monthHoursCustom,
+            useCustomHours: useCustomHours,
+            showNewTaTypeInput: false,
+            anonymous: review.anonymous || false,
+            rating: review.rating || 0,
+            title: review.title || '',
+            description: review.description || '',
+            validationFile: null
+        });
+    };
+
+    useEffect(() => {
+        if (isOpen && review) {
             // Get current user
             const getUser = async () => {
                 const { data: { user } } = await supabase.auth.getUser();
@@ -69,66 +92,43 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
 
             // Fetch TA types
             fetchTaTypes();
+
+            // Convert review data to form format
+            convertReviewToFormData(review);
         } else {
             // Reset cuando se cierra el modal
             setStep(1);
             setValidationErrors({});
-            setFormData({
-                semester: '',
-                taTypeId: '',
-                customTaType: '',
-                professor: '',
-                salaryRange: '',
-                monthHours: '',
-                monthHoursCustom: '',
-                useCustomHours: false,
-                showNewTaTypeInput: false,
-                anonymous: false,
-                rating: 0,
-                title: '',
-                description: '',
-                validationFile: null
-            });
         }
-    }, [isOpen, courseId]);
+    }, [isOpen, review]);
 
     const fetchTaTypes = async () => {
         try {
-            // Try with the exact table name as defined in the schema (with quotes)
             const { data, error } = await supabase
                 .from('TaTypes')
                 .select('id, name')
                 .order('name');
-            
+
             if (error) {
                 console.error('Error fetching TA types:', error);
-                console.error('Error details:', {
-                    message: error.message,
-                    details: error.details,
-                    hint: error.hint,
-                    code: error.code
-                });
-                // Try alternative table name without quotes
                 const { data: altData, error: altError } = await supabase
                     .from('tatypes')
                     .select('id, name')
                     .order('name');
-                
+
                 if (altError) {
                     console.error('Alternative fetch also failed:', altError);
-                    throw error; // Throw original error
+                    setTaTypes([]);
+                    return;
                 }
-                
-                console.log('TaTypes fetched (alternative):', altData);
+
                 setTaTypes(altData || []);
                 return;
             }
-            
-            console.log('TaTypes fetched:', data);
+
             setTaTypes(data || []);
         } catch (error) {
             console.error('Error fetching TA types:', error);
-            // Set empty array on error to prevent UI issues
             setTaTypes([]);
         }
     };
@@ -150,7 +150,7 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
 
     const validateStep = (stepNumber) => {
         const errors = {};
-        
+
         switch (stepNumber) {
             case 1:
                 if (!formData.semester) {
@@ -175,7 +175,6 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                 }
                 break;
             case 3:
-                // No validation needed for privacy step
                 break;
             case 4:
                 if (!formData.rating || formData.rating === 0) {
@@ -189,12 +188,11 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                 }
                 break;
             case 5:
-                // No validation needed for validation file step (optional)
                 break;
             default:
                 break;
         }
-        
+
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -215,48 +213,8 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
 
     const handleSubmit = async () => {
         if (!user) {
-            alert('Debes iniciar sesión para publicar una reseña');
+            alert('Debes iniciar sesión para editar una reseña');
             return;
-        }
-
-        // Si hay archivo de validación, validarlo primero
-        if (formData.validationFile && course) {
-            setValidating(true);
-            setValidationResult(null);
-            
-            try {
-                // Obtener la sigla del curso para la validación
-                const cursoSigla = course.initial || course.name;
-                setValidating(true);
-                const resultado = await validarAyudantia(formData.validationFile, cursoSigla);
-                setValidating(false);
-                
-                setValidationResult(resultado);
-                
-                if (resultado?.validado === false) {
-                    const continuar = confirm(
-                        'El documento entregado no es valido o no indica que fuiste ayudante de este curso. ¿Deseas continuar y publicar la reseña sin validación?'
-                    );
-                    if (!continuar) {
-                        setValidating(false);
-                        return;
-                    }
-                }
-            } catch (error) {
-                setValidationResult({ validado: false, error: error.message });
-                console.error('Error en validación:', error);
-                const continuar = confirm(
-                    'Hubo un error al validar el documento. ' +
-                    '¿Deseas continuar y publicar la reseña sin validación?'
-                );
-                if (!continuar) {
-                    setValidating(false);
-                    setValidationResult({ validado: false });
-                    return;
-                }
-            } finally {
-                setValidating(false);
-            }
         }
 
         setSubmitting(true);
@@ -280,7 +238,6 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
             if (formData.useCustomHours) {
                 finalMonthHours = parseInt(formData.monthHoursCustom) || null;
             } else if (formData.monthHours) {
-                // Parse range like "5-10" to get average or first value
                 if (formData.monthHours.includes('-')) {
                     const [min, max] = formData.monthHours.split('-').map(Number);
                     finalMonthHours = Math.floor((min + max) / 2);
@@ -295,10 +252,9 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
             if (formData.salaryRange) {
                 if (formData.salaryRange === '300000-plus') {
                     minSalary = 300000;
-                    maxSalary = null; // No max for "300k or more"
+                    maxSalary = null;
                 } else if (formData.salaryRange.includes('-')) {
                     const [min, max] = formData.salaryRange.split('-').map(val => {
-                        // Remove dots from formatted numbers like "10.000"
                         return parseInt(val.replace(/\./g, ''));
                     });
                     minSalary = min;
@@ -306,11 +262,8 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                 }
             }
 
-            // Prepare review data
-            // validated is always false regardless of whether a file is uploaded
-            // professor: save trimmed value or NULL if empty
             const professorValue = formData.professor.trim() || null;
-            
+
             // Get user display name from metadata if not anonymous
             const authorName = formData.anonymous 
                 ? null 
@@ -318,9 +271,8 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                    user?.user_metadata?.full_name || 
                    user?.email?.split('@')[0] || 
                    null);
-            
+
             const reviewData = {
-                course_id: courseId,
                 user_id: formData.anonymous ? null : user.id,
                 semester: formData.semester,
                 ta_type_id: finalTaTypeId,
@@ -332,47 +284,23 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                 title: formData.title,
                 description: formData.description,
                 anonymous: formData.anonymous,
-                validated: validationResult.validado,
+                validated: false,
                 author_name: authorName
             };
 
-            const { error: insertError } = await supabase
+            const { error: updateError } = await supabase
                 .from('Reviews')
-                .insert([reviewData]);
+                .update(reviewData)
+                .eq('id', review.id);
 
-            if (insertError) throw insertError;
+            if (updateError) throw updateError;
 
-            // alert('¡Reseña publicada exitosamente!');
-            setSuccessMessage('¡Reseña publicada exitosamente!');
-            // Cerrar después de 2 segundos
-            setTimeout(() => {
-                onClose();
-                setSuccessMessage(null);
-            }, 2000);
-
-            // onClose();
-            // Reset form
-            setStep(1);
-            setValidationErrors({});
-            setFormData({
-                semester: '',
-                taTypeId: '',
-                customTaType: '',
-                professor: '',
-                salaryRange: '',
-                monthHours: '',
-                monthHoursCustom: '',
-                useCustomHours: false,
-                showNewTaTypeInput: false,
-                anonymous: false,
-                rating: 0,
-                title: '',
-                description: '',
-                validationFile: null
-            });
+            // alert('¡Reseña actualizada exitosamente!');
+            onUpdate(); // Refresh the review data
+            onClose();
         } catch (error) {
-            console.error('Error submitting review:', error);
-            alert('Error al publicar la reseña: ' + error.message);
+            console.error('Error updating review:', error);
+            alert('Error al actualizar la reseña: ' + error.message);
         } finally {
             setSubmitting(false);
         }
@@ -380,57 +308,34 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
 
     if (!isOpen) return null;
 
-    // Generate semester options from 2018-1 to 2025-2 (inclusive)
-    // 
-    // LÓGICA DE GENERACIÓN DE SEMESTRES:
-    // 1. Partimos desde un año inicial (2018) y semestre inicial (1)
-    // 2. Generamos semestres en orden: 2018-1, 2018-2, 2019-1, 2019-2, etc.
-    // 3. La secuencia es: año-semestre1, año-semestre2, (año+1)-semestre1, (año+1)-semestre2...
-    // 4. Nos detenemos cuando llegamos a 2025-2 (el último semestre permitido)
-    //
-    // Ejemplo de secuencia generada:
-    // 2018-1 → 2018-2 → 2019-1 → 2019-2 → ... → 2025-1 → 2025-2 (STOP)
-    
+    // Generate semester options (same as ReviewModal)
     const semesterOptions = [];
-    
-    // Inicializamos desde 2018-1
     let year = 2018;
     let semester = 1;
-    
-    // Generamos todos los semestres hasta llegar a 2025-2
+
     while (true) {
-        // Agregamos el semestre actual al array
         const semesterStr = `${year}-${semester}`;
         semesterOptions.push(semesterStr);
-        
-        // Si llegamos a 2025-2, detenemos la generación
+
         if (year === 2025 && semester === 2) {
             break;
         }
-        
-        // Avanzamos al siguiente semestre
-        // Si estamos en semestre 1, pasamos a semestre 2 del mismo año
-        // Si estamos en semestre 2, pasamos a semestre 1 del año siguiente
+
         if (semester === 1) {
-            semester = 2;  // Mismo año, siguiente semestre
+            semester = 2;
         } else {
-            semester = 1;  // Nuevo año, primer semestre
+            semester = 1;
             year++;
         }
-        
-        // Protección contra loops infinitos (por si acaso)
+
         if (year > 2025) {
             break;
         }
     }
-    
-    // Invertir el array para mostrar los semestres más recientes primero (2025-2 al inicio, 2018-1 al final)
-    const semesterOptionsReversed = [...semesterOptions].reverse();
-    
-    console.log('Semester options generated:', semesterOptions);
-    console.log('Semester options reversed (most recent first):', semesterOptionsReversed);
 
-    // Salary range options: 0-10k, 10k-20k, ..., 290k-300k, 300k+
+    const semesterOptionsReversed = [...semesterOptions].reverse();
+
+    // Salary range options
     const salaryRangeOptions = [];
     for (let i = 0; i < 30; i++) {
         const min = i * 10000;
@@ -445,7 +350,7 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
         label: '$300.000 o más'
     });
 
-    // Month hours options with 5-hour ranges up to 100 hours
+    // Month hours options
     const monthHoursOptions = [];
     for (let i = 0; i < 100; i += 5) {
         const min = i;
@@ -457,50 +362,12 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
     }
 
     return (
-        <>
-        <LoadingGemini isOpen={validating} />
-
-        {/* Notificación de éxito */}
-        {successMessage && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-none">
-                    <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl p-6 shadow-2xl border-2 border-green-400/50 pointer-events-auto animate-[slideIn_0.3s_ease-out]">
-                        <div className="flex items-center gap-4">
-                            {/* Icono de éxito */}
-                            <div className="flex-shrink-0">
-                                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                                    <svg 
-                                        className="w-7 h-7 text-white" 
-                                        fill="none" 
-                                        stroke="currentColor" 
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path 
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
-                                            strokeWidth={3} 
-                                            d="M5 13l4 4L19 7" 
-                                        />
-                                    </svg>
-                                </div>
-                            </div>
-                            
-                            {/* Mensaje */}
-                            <div>
-                                <p className="text-white font-bold text-lg">
-                                    {successMessage}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="bg-blue-950 border-2 border-blue-400/30 rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-white">
-                        Publicar Reseña - Paso {step} de {totalSteps}
+                        Editar Reseña - Paso {step} de {totalSteps}
                     </h2>
                     <button
                         onClick={onClose}
@@ -617,9 +484,8 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                             <select
                                 value={formData.salaryRange}
                                 onChange={(e) => handleInputChange('salaryRange', e.target.value)}
-                                className={`w-full px-4 py-2 bg-blue-900/50 border rounded-lg text-white focus:outline-none focus:border-yellow-400 ${
-                                    validationErrors.salaryRange ? 'border-red-400' : 'border-blue-400/30'
-                                }`}
+                                className={`w-full px-4 py-2 bg-blue-900/50 border rounded-lg text-white focus:outline-none focus:border-yellow-400 ${validationErrors.salaryRange ? 'border-red-400' : 'border-blue-400/30'
+                                    }`}
                             >
                                 <option value="">Selecciona un rango de salario</option>
                                 {salaryRangeOptions.map(option => (
@@ -643,9 +509,8 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                                         handleInputChange('useCustomHours', false);
                                     }}
                                     disabled={formData.useCustomHours}
-                                    className={`flex-1 px-4 py-2 bg-blue-900/50 border rounded-lg text-white focus:outline-none focus:border-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed ${
-                                        validationErrors.monthHours ? 'border-red-400' : 'border-blue-400/30'
-                                    }`}
+                                    className={`flex-1 px-4 py-2 bg-blue-900/50 border rounded-lg text-white focus:outline-none focus:border-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed ${validationErrors.monthHours ? 'border-red-400' : 'border-blue-400/30'
+                                        }`}
                                 >
                                     <option value="">Selecciona horas mensuales</option>
                                     {monthHoursOptions.map(option => (
@@ -662,11 +527,10 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                                             handleInputChange('monthHours', '');
                                         }
                                     }}
-                                    className={`px-4 py-2 font-semibold rounded-lg transition-colors whitespace-nowrap ${
-                                        formData.useCustomHours
+                                    className={`px-4 py-2 font-semibold rounded-lg transition-colors whitespace-nowrap ${formData.useCustomHours
                                             ? 'bg-red-500 text-white hover:bg-red-600'
                                             : 'bg-yellow-400 text-blue-950 hover:bg-yellow-500'
-                                    }`}
+                                        }`}
                                 >
                                     {formData.useCustomHours ? 'Cancelar' : 'Personalizado'}
                                 </button>
@@ -685,9 +549,8 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                                     onChange={(e) => handleInputChange('monthHoursCustom', e.target.value)}
                                     placeholder="Ej: 25"
                                     min="0"
-                                    className={`w-full px-4 py-2 bg-blue-900/50 border rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-yellow-400 ${
-                                        validationErrors.monthHoursCustom ? 'border-red-400' : 'border-blue-400/30'
-                                    }`}
+                                    className={`w-full px-4 py-2 bg-blue-900/50 border rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-yellow-400 ${validationErrors.monthHoursCustom ? 'border-red-400' : 'border-blue-400/30'
+                                        }`}
                                 />
                                 {validationErrors.monthHoursCustom && (
                                     <p className="text-red-400 text-sm mt-1">{validationErrors.monthHoursCustom}</p>
@@ -755,9 +618,8 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                                 value={formData.title}
                                 onChange={(e) => handleInputChange('title', e.target.value)}
                                 placeholder="Ej: Excelente experiencia como ayudante"
-                                className={`w-full px-4 py-2 bg-blue-900/50 border rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-yellow-400 ${
-                                    validationErrors.title ? 'border-red-400' : 'border-blue-400/30'
-                                }`}
+                                className={`w-full px-4 py-2 bg-blue-900/50 border rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-yellow-400 ${validationErrors.title ? 'border-red-400' : 'border-blue-400/30'
+                                    }`}
                             />
                             {validationErrors.title && (
                                 <p className="text-red-400 text-sm mt-1">{validationErrors.title}</p>
@@ -771,9 +633,8 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                                 onChange={(e) => handleInputChange('description', e.target.value)}
                                 placeholder="Comparte tu experiencia como ayudante..."
                                 rows="6"
-                                className={`w-full px-4 py-2 bg-blue-900/50 border rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-yellow-400 resize-none ${
-                                    validationErrors.description ? 'border-red-400' : 'border-blue-400/30'
-                                }`}
+                                className={`w-full px-4 py-2 bg-blue-900/50 border rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-yellow-400 resize-none ${validationErrors.description ? 'border-red-400' : 'border-blue-400/30'
+                                    }`}
                             />
                             {validationErrors.description && (
                                 <p className="text-red-400 text-sm mt-1">{validationErrors.description}</p>
@@ -839,14 +700,13 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                             disabled={submitting}
                             className="px-6 py-2 bg-yellow-400 text-blue-950 font-semibold rounded-lg hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {submitting ? 'Publicando...' : 'Publicar Reseña'}
+                            {submitting ? 'Guardando...' : 'Guardar Cambios'}
                         </button>
                     )}
                 </div>
             </div>
         </div>
-        </>
     );
 };
 
-export default ReviewModal;
+export default EditReviewModal;
