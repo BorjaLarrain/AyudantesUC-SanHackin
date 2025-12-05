@@ -219,19 +219,24 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
             return;
         }
 
+        let validationResultLocal = null;
+
         // Si hay archivo de validación, validarlo primero
         if (formData.validationFile && course) {
             setValidating(true);
-            setValidationResult(null);
+            // setValidationResult(null);
             
             try {
                 // Obtener la sigla del curso para la validación
                 const cursoSigla = course.initial || course.name;
                 setValidating(true);
                 const resultado = await validarAyudantia(formData.validationFile, cursoSigla);
+                validationResultLocal = resultado;
+                console.log("Resultado de validación:", resultado);
+                setValidationResult(resultado);
                 setValidating(false);
                 
-                setValidationResult(resultado);
+                
                 
                 if (resultado?.validado === false) {
                     const continuar = confirm(
@@ -243,6 +248,7 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                     }
                 }
             } catch (error) {
+                validationResultLocal = { validado: false, error: error.message };
                 setValidationResult({ validado: false, error: error.message });
                 console.error('Error en validación:', error);
                 const continuar = confirm(
@@ -332,7 +338,7 @@ const ReviewModal = ({ isOpen, onClose, courseId }) => {
                 title: formData.title,
                 description: formData.description,
                 anonymous: formData.anonymous,
-                validated: validationResult?.validado || false,
+                validated: validationResultLocal?.validado || false,
                 author_name: authorName
             };
 
