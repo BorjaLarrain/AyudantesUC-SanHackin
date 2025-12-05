@@ -1,4 +1,4 @@
-import { Link , useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { UserAuth } from '../context/AuthContext';
 import supabase from '../config/supabaseClient';
 
@@ -11,7 +11,7 @@ const Navbar = () => {
         navigate('/');
     };
 
-    const displayName = 
+    const displayName =
         session?.user?.user_metadata?.display_name ||
         session?.user?.user_metadata?.full_name ||
         session?.user?.email?.split('@')[0] ||
@@ -25,6 +25,14 @@ const Navbar = () => {
                     <div className="text-2xl font-bold text-white">
                         Ayudantes<span className="text-yellow-400">UC</span>
                     </div>
+                </Link>
+
+                {/* Botón central - Explorar */}
+                <Link
+                    to="/explore"
+                    className="px-6 py-2 bg-yellow-400 text-blue-950 font-semibold rounded-full hover:bg-yellow-500 transition-colors"
+                >
+                    Explorar Reseñas
                 </Link>
 
                 {/* Navigation Links */}
