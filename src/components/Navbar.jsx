@@ -27,13 +27,21 @@ const Navbar = () => {
                     </div>
                 </Link>
 
-                {/* Botón central - Explorar */}
-                <Link
-                    to="/explore"
-                    className="px-6 py-2 bg-yellow-400 text-blue-950 font-semibold rounded-full hover:bg-yellow-500 transition-colors"
-                >
-                    Explorar Reseñas
-                </Link>
+                {/* Botones centrales - Explorar */}
+                <div className="flex items-center gap-3">
+                    <Link
+                        to="/explore"
+                        className="px-6 py-2 bg-yellow-400 text-blue-950 font-semibold rounded-full hover:bg-yellow-500 transition-colors"
+                    >
+                        Explorar Reseñas
+                    </Link>
+                    <Link
+                        to="/courses"
+                        className="px-6 py-2 bg-transparent border-2 border-blue-400 text-white font-semibold rounded-full hover:bg-blue-400/20 transition-colors"
+                    >
+                        Explorar Cursos
+                    </Link>
+                </div>
 
                 {/* Navigation Links */}
                 <div className="flex items-center gap-6">
